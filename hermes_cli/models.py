@@ -145,17 +145,8 @@ _PROVIDER_MODELS: dict[str, list[str]] = {
         "glm-4.5-flash",
     ],
     "xai": [
-        "grok-4.20-0309-reasoning",
-        "grok-4.20-0309-non-reasoning",
-        "grok-4.20-multi-agent-0309",
+        "grok-4.20-reasoning",
         "grok-4-1-fast-reasoning",
-        "grok-4-1-fast-non-reasoning",
-        "grok-4-fast-reasoning",
-        "grok-4-fast-non-reasoning",
-        "grok-4-0709",
-        "grok-code-fast-1",
-        "grok-3",
-        "grok-3-mini",
     ],
     "kimi-coding": [
         "kimi-for-coding",
@@ -1070,7 +1061,8 @@ def detect_provider_for_model(
             break
 
     if direct_match:
-        # Check if we have credentials for this provider
+        # Check if we have credentials for this provider — env vars,
+        # credential pool, or auth store entries.
         has_creds = False
         try:
             from hermes_cli.auth import PROVIDER_REGISTRY
@@ -1083,16 +1075,28 @@ def detect_provider_for_model(
                         break
         except Exception:
             pass
+        # Also check credential pool and auth store — covers OAuth,
+        # Claude Code tokens, and other non-env-var credentials (#10300).
+        if not has_creds:
+            try:
+                from agent.credential_pool import load_pool
+                pool = load_pool(direct_match)
+                if pool.has_credentials():
+                    has_creds = True
+            except Exception:
+                pass
+        if not has_creds:
+            try:
+                from hermes_cli.auth import _load_auth_store
+                store = _load_auth_store()
+                if direct_match in store.get("providers", {}) or direct_match in store.get("credential_pool", {}):
+                    has_creds = True
+            except Exception:
+                pass
 
-        if has_creds:
-            return (direct_match, name)
-
-        # No direct creds — try to find this model on OpenRouter instead
-        or_slug = _find_openrouter_slug(name)
-        if or_slug:
-            return ("openrouter", or_slug)
-        # Still return the direct provider — credential resolution will
-        # give a clear error rather than silently using the wrong provider
+        # Always return the direct provider match.  If credentials are
+        # missing, the client init will give a clear error rather than
+        # silently routing through the wrong provider (#10300).
         return (direct_match, name)
 
     # --- Step 2: check OpenRouter catalog ---
@@ -1566,6 +1570,11 @@ def copilot_model_api_mode(
     primary signal.  Falls back to the catalog's ``supported_endpoints``
     only for models not covered by the pattern check.
     """
+    # Fetch the catalog once so normalize + endpoint check share it
+    # (avoids two redundant network calls for non-GPT-5 models).
+    if catalog is None and api_key:
+        catalog = fetch_github_model_catalog(api_key=api_key)
+
     normalized = normalize_copilot_model_id(model_id, catalog=catalog, api_key=api_key)
     if not normalized:
         return "chat_completions"
@@ -1575,9 +1584,6 @@ def copilot_model_api_mode(
         return "codex_responses"
 
     # Secondary: check catalog for non-GPT-5 models (Claude via /v1/messages, etc.)
-    if catalog is None and api_key:
-        catalog = fetch_github_model_catalog(api_key=api_key)
-
     if catalog:
         catalog_entry = next((item for item in catalog if item.get("id") == normalized), None)
         if isinstance(catalog_entry, dict):
