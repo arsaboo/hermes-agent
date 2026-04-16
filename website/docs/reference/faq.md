@@ -56,15 +56,13 @@ API calls go **only to the LLM provider you configure** (e.g., OpenRouter, your 
 
 ### Can I use it offline / with local models?
 
-Yes. Run `hermes model`, select **Custom endpoint**, and enter your server's URL:
+Yes. If you use **Ollama**, it's a built-in provider — just run `hermes model` and select **Local Ollama**:
 
 ```bash
 hermes model
-# Select: Custom endpoint (enter URL manually)
-# API base URL: http://localhost:11434/v1
-# API key: ollama
-# Model name: qwen3.5:27b
-# Context length: 32768   ← set this to match your server's actual context window
+# Select: Local Ollama
+# Hermes auto-discovers models from localhost:11434
+# Pick a model (e.g. qwen3.5:27b)
 ```
 
 Or configure it directly in `config.yaml`:
@@ -72,13 +70,12 @@ Or configure it directly in `config.yaml`:
 ```yaml
 model:
   default: qwen3.5:27b
-  provider: custom
-  base_url: http://localhost:11434/v1
+  provider: ollama
 ```
 
-Hermes persists the endpoint, provider, and base URL in `config.yaml` so it survives restarts. If your local server has exactly one model loaded, `/model custom` auto-detects it. You can also set `provider: custom` in config.yaml — it's a first-class provider, not an alias for anything else.
+For other local servers (vLLM, llama.cpp, SGLang, LocalAI), select **Custom endpoint** and enter your server's URL manually.
 
-This works with Ollama, vLLM, llama.cpp server, SGLang, LocalAI, and others. See the [Configuration guide](../user-guide/configuration.md) for details.
+Hermes persists the endpoint, provider, and base URL in `config.yaml` so it survives restarts. See the [Configuration guide](../user-guide/configuration.md) for details.
 
 :::tip Ollama users
 If you set a custom `num_ctx` in Ollama (e.g., `ollama run --num_ctx 16384`), make sure to set the matching context length in Hermes — Ollama's `/api/show` reports the model's *maximum* context, not the effective `num_ctx` you configured.

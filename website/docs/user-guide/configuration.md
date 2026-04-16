@@ -473,7 +473,7 @@ auxiliary:
 ```
 Works with any provider: `nous`, `openrouter`, `codex`, `anthropic`, `main`, etc.
 
-**Custom endpoint** (self-hosted, Ollama, zai, DeepSeek, etc.):
+**Custom endpoint** (self-hosted, vLLM, etc.):
 ```yaml
 auxiliary:
   compression:

@@ -310,10 +310,9 @@ Then configure Hermes:
 
 ```bash
 hermes model
-# Select "Custom endpoint (self-hosted / VLLM / etc.)"
-# Enter URL: http://localhost:11434/v1
-# Skip API key (Ollama doesn't need one)
-# Enter model name (e.g. qwen2.5-coder:32b)
+# Select "Local Ollama"
+# Hermes auto-discovers models from your local instance
+# Pick a model (e.g. qwen2.5-coder:32b)
 ```
 
 Or configure `config.yaml` directly:
@@ -321,8 +320,7 @@ Or configure `config.yaml` directly:
 ```yaml
 model:
   default: qwen2.5-coder:32b
-  provider: custom
-  base_url: http://localhost:11434/v1
+  provider: ollama
   context_length: 32768   # See warning below
 ```
 
@@ -958,7 +956,7 @@ fallback_model:
 
 When activated, the fallback swaps the model and provider mid-session without losing your conversation. It fires **at most once** per session.
 
-Supported providers: `openrouter`, `nous`, `openai-codex`, `copilot`, `copilot-acp`, `anthropic`, `huggingface`, `zai`, `kimi-coding`, `kimi-coding-cn`, `minimax`, `minimax-cn`, `deepseek`, `ai-gateway`, `opencode-zen`, `opencode-go`, `kilocode`, `xiaomi`, `arcee`, `alibaba`, `custom`.
+Supported providers: `openrouter`, `nous`, `openai-codex`, `copilot`, `copilot-acp`, `anthropic`, `huggingface`, `zai`, `kimi-coding`, `kimi-coding-cn`, `minimax`, `minimax-cn`, `deepseek`, `ai-gateway`, `opencode-zen`, `opencode-go`, `kilocode`, `xiaomi`, `arcee`, `alibaba`, `ollama-cloud`, `ollama`, `custom`.
 
 :::tip
 Fallback is configured exclusively through `config.yaml` — there are no environment variables for it. For full details on when it triggers, supported providers, and how it interacts with auxiliary tasks and delegation, see [Fallback Providers](/docs/user-guide/features/fallback-providers).
