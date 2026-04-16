@@ -1066,6 +1066,22 @@ OPTIONAL_ENV_VARS = {
         "category": "provider",
         "advanced": True,
     },
+    "OLLAMA_LOCAL_API_KEY": {
+        "description": "Local Ollama API key (usually not required)",
+        "prompt": "Local Ollama API key (optional, press Enter to skip)",
+        "url": None,
+        "password": True,
+        "category": "provider",
+        "advanced": True,
+    },
+    "OLLAMA_LOCAL_BASE_URL": {
+        "description": "Local Ollama base URL override (default: http://localhost:11434/v1)",
+        "prompt": "Local Ollama base URL (leave empty for default)",
+        "url": None,
+        "password": False,
+        "category": "provider",
+        "advanced": True,
+    },
     "XIAOMI_API_KEY": {
         "description": "Xiaomi MiMo API key for MiMo models (mimo-v2-pro, mimo-v2-omni, mimo-v2-flash)",
         "prompt": "Xiaomi MiMo API Key",

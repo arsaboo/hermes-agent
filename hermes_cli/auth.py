@@ -71,6 +71,7 @@ DEFAULT_QWEN_BASE_URL = "https://portal.qwen.ai/v1"
 DEFAULT_GITHUB_MODELS_BASE_URL = "https://api.githubcopilot.com"
 DEFAULT_COPILOT_ACP_BASE_URL = "acp://copilot"
 DEFAULT_OLLAMA_CLOUD_BASE_URL = "https://ollama.com/v1"
+DEFAULT_LOCAL_OLLAMA_BASE_URL = "http://localhost:11434/v1"
 CODEX_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 CODEX_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
 CODEX_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 120
@@ -291,6 +292,14 @@ PROVIDER_REGISTRY: Dict[str, ProviderConfig] = {
         api_key_env_vars=(),
         base_url_env_var="BEDROCK_BASE_URL",
     ),
+    "ollama": ProviderConfig(
+        id="ollama",
+        name="Local Ollama",
+        auth_type="api_key",
+        inference_base_url=DEFAULT_LOCAL_OLLAMA_BASE_URL,
+        api_key_env_vars=("OLLAMA_LOCAL_API_KEY",),
+        base_url_env_var="OLLAMA_LOCAL_BASE_URL",
+    ),
 }
 
 
@@ -389,6 +398,11 @@ def _resolve_api_key_provider_secret(
         val = os.getenv(env_var, "").strip()
         if has_usable_secret(val):
             return val, env_var
+
+    # Local Ollama doesn't require authentication — return a dummy token
+    # so credential resolution succeeds without prompting the user.
+    if provider_id == "ollama":
+        return "ollama", "default"
 
     return "", ""
 
@@ -947,7 +961,7 @@ def resolve_provider(
         "kilo": "kilocode", "kilo-code": "kilocode", "kilo-gateway": "kilocode",
         # Local server aliases — route through the generic custom provider
         "lmstudio": "custom", "lm-studio": "custom", "lm_studio": "custom",
-        "ollama": "custom", "ollama_cloud": "ollama-cloud",
+        "ollama_cloud": "ollama-cloud",
         "vllm": "custom", "llamacpp": "custom",
         "llama.cpp": "custom", "llama-cpp": "custom",
     }

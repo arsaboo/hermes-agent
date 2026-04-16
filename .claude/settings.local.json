@@ -9,7 +9,10 @@
       "Bash(git checkout *)",
       "Bash(git reset *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(python -m pytest tests/hermes_cli/test_local_ollama_provider.py -v)",
+      "Bash(python -m pytest tests/hermes_cli/test_ollama_cloud_provider.py -v)",
+      "Bash(python -m pytest tests/hermes_cli/ -v --ignore=tests/hermes_cli/test_ollama_cloud_provider.py -k \"ollama or provider or alias or normalize\")"
     ]
   }
 }

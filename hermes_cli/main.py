@@ -1141,7 +1141,7 @@ def select_provider_and_model(args=None):
         _model_flow_kimi(config, current_model)
     elif selected_provider == "bedrock":
         _model_flow_bedrock(config, current_model)
-    elif selected_provider in ("gemini", "deepseek", "xai", "zai", "kimi-coding-cn", "minimax", "minimax-cn", "kilocode", "opencode-zen", "opencode-go", "ai-gateway", "alibaba", "huggingface", "xiaomi", "arcee", "ollama-cloud"):
+    elif selected_provider in ("gemini", "deepseek", "xai", "zai", "kimi-coding-cn", "minimax", "minimax-cn", "kilocode", "opencode-zen", "opencode-go", "ai-gateway", "alibaba", "huggingface", "xiaomi", "arcee", "ollama-cloud", "ollama"):
         _model_flow_api_key_provider(config, selected_provider, current_model)
 
     # ── Post-switch cleanup: clear stale OPENAI_BASE_URL ──────────────
@@ -2715,20 +2715,25 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             break
 
     if not existing_key:
-        print(f"No {pconfig.name} API key configured.")
-        if key_env:
-            try:
-                import getpass
-                new_key = getpass.getpass(f"{key_env} (or Enter to cancel): ").strip()
-            except (KeyboardInterrupt, EOFError):
-                print()
-                return
-            if not new_key:
-                print("Cancelled.")
-                return
-            save_env_value(key_env, new_key)
-            print("API key saved.")
+        if provider_id == "ollama":
+            # Local Ollama typically needs no auth — skip key prompt
+            print(f"  {pconfig.name} — no API key required for local access.")
             print()
+        else:
+            print(f"No {pconfig.name} API key configured.")
+            if key_env:
+                try:
+                    import getpass
+                    new_key = getpass.getpass(f"{key_env} (or Enter to cancel): ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+                if not new_key:
+                    print("Cancelled.")
+                    return
+                save_env_value(key_env, new_key)
+                print("API key saved.")
+                print()
     else:
         print(f"  {pconfig.name} API key: {existing_key[:8]}... ✓")
         print()
@@ -2763,6 +2768,14 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
         model_list = fetch_ollama_cloud_models(api_key=api_key_for_probe, base_url=effective_base)
         if model_list:
             print(f"  Found {len(model_list)} model(s) from Ollama Cloud")
+    # Local Ollama: probe localhost for installed models
+    elif provider_id == "ollama":
+        from hermes_cli.models import fetch_local_ollama_models
+        model_list = fetch_local_ollama_models(base_url=effective_base)
+        if model_list:
+            print(f"  Found {len(model_list)} model(s) from local Ollama")
+        else:
+            print("  Could not reach local Ollama — is it running? (ollama serve)")
     else:
         curated = _PROVIDER_MODELS.get(provider_id, [])
 
@@ -4890,7 +4903,7 @@ For more help on a command:
     )
     chat_parser.add_argument(
         "--provider",
-        choices=["auto", "openrouter", "nous", "openai-codex", "copilot-acp", "copilot", "anthropic", "gemini", "xai", "ollama-cloud", "huggingface", "zai", "kimi-coding", "kimi-coding-cn", "minimax", "minimax-cn", "kilocode", "xiaomi", "arcee"],
+        choices=["auto", "openrouter", "nous", "openai-codex", "copilot-acp", "copilot", "anthropic", "gemini", "xai", "ollama-cloud", "ollama", "huggingface", "zai", "kimi-coding", "kimi-coding-cn", "minimax", "minimax-cn", "kilocode", "xiaomi", "arcee"],
         default=None,
         help="Inference provider (default: auto)"
     )

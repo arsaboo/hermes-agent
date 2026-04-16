@@ -541,6 +541,7 @@ CANONICAL_PROVIDERS: list[ProviderEntry] = [
     ProviderEntry("minimax-cn",     "MiniMax (China)",          "MiniMax China (domestic direct API)"),
     ProviderEntry("alibaba",        "Alibaba Cloud (DashScope)","Alibaba Cloud / DashScope Coding (Qwen + multi-provider)"),
     ProviderEntry("ollama-cloud",   "Ollama Cloud",             "Ollama Cloud (cloud-hosted open models — ollama.com)"),
+    ProviderEntry("ollama",         "Local Ollama",             "Local Ollama (direct API — localhost:11434)"),
     ProviderEntry("arcee",          "Arcee AI",                 "Arcee AI (Trinity models — direct API)"),
     ProviderEntry("kilocode",       "Kilo Code",                "Kilo Code (Kilo Gateway API)"),
     ProviderEntry("opencode-zen",   "OpenCode Zen",             "OpenCode Zen (35+ curated models, pay-as-you-go)"),
@@ -606,7 +607,7 @@ _PROVIDER_ALIASES = {
     "grok": "xai",
     "x-ai": "xai",
     "x.ai": "xai",
-    "ollama": "custom",  # bare "ollama" = local; use "ollama-cloud" for cloud
+    "ollama-local": "ollama",
     "ollama_cloud": "ollama-cloud",
 }
 
@@ -1911,6 +1912,93 @@ def fetch_ollama_cloud_models(
 
     # Total failure — return stale cache if available (ignore TTL)
     stale = _load_ollama_cloud_cache(ignore_ttl=True)
+    if stale is not None:
+        return stale["models"]
+
+    return []
+
+
+# ---------------------------------------------------------------------------
+# Local Ollama model discovery (live API probe + disk cache)
+# ---------------------------------------------------------------------------
+
+_LOCAL_OLLAMA_CACHE_TTL = 300  # 5 minutes (local server, shorter TTL)
+
+
+def _local_ollama_cache_path() -> Path:
+    """Return the path for the local Ollama model cache."""
+    from hermes_constants import get_hermes_home
+    return get_hermes_home() / "ollama_local_models_cache.json"
+
+
+def _load_local_ollama_cache(*, ignore_ttl: bool = False) -> Optional[dict]:
+    """Load cached local Ollama models from disk."""
+    try:
+        cache_path = _local_ollama_cache_path()
+        if not cache_path.exists():
+            return None
+        with open(cache_path, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return None
+        models = data.get("models")
+        if not (isinstance(models, list) and models):
+            return None
+        if not ignore_ttl:
+            cached_at = data.get("cached_at", 0)
+            if (time.time() - cached_at) > _LOCAL_OLLAMA_CACHE_TTL:
+                return None  # stale
+        return data
+    except Exception:
+        pass
+    return None
+
+
+def _save_local_ollama_cache(models: list[str]) -> None:
+    """Persist the local Ollama model list to disk."""
+    try:
+        from utils import atomic_json_write
+        cache_path = _local_ollama_cache_path()
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_json_write(cache_path, {"models": models, "cached_at": time.time()}, indent=None)
+    except Exception:
+        pass
+
+
+def fetch_local_ollama_models(
+    base_url: Optional[str] = None,
+    *,
+    force_refresh: bool = False,
+) -> list[str]:
+    """Fetch models from a local Ollama instance via /v1/models.
+
+    Resolution order:
+      1. Disk cache (if fresh, < 5 min, and not force_refresh)
+      2. Live ``/v1/models`` endpoint probe
+
+    Returns a list of model IDs (never None — empty list on failure).
+    """
+    # 1. Check disk cache
+    if not force_refresh:
+        cached = _load_local_ollama_cache()
+        if cached is not None:
+            return cached["models"]
+
+    # 2. Live API probe — local Ollama typically needs no auth
+    if not base_url:
+        base_url = os.getenv("OLLAMA_LOCAL_BASE_URL", "") or "http://localhost:11434/v1"
+
+    live_models: list[str] = []
+    result = fetch_api_models("ollama", base_url, timeout=5.0)
+    if result:
+        live_models = result
+
+    if live_models:
+        _save_local_ollama_cache(live_models)
+        return live_models
+
+    # Failure — return stale cache if available
+    stale = _load_local_ollama_cache(ignore_ttl=True)
     if stale is not None:
         return stale["models"]
 

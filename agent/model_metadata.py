@@ -241,6 +241,8 @@ _URL_TO_PROVIDER: Dict[str, str] = {
     "api.xiaomimimo.com": "xiaomi",
     "xiaomimimo.com": "xiaomi",
     "ollama.com": "ollama-cloud",
+    "localhost:11434": "ollama",
+    "127.0.0.1:11434": "ollama",
 }
 
 
