@@ -1067,6 +1067,30 @@ providers:
     api_mode: anthropic_messages  # for Anthropic-compatible proxies
 ```
 
+:::warning Avoid reserved provider keys
+For named custom providers under `providers:`, do not use keys that collide with built-in provider names or aliases such as `ollama`, `custom`, `openai`, or `openrouter`.
+
+Use a unique key like `ollama-local`, `lab-ollama`, or `my-ollama` instead.
+
+Good:
+
+```yaml
+providers:
+  ollama-local:
+    name: Ollama Local
+    base_url: http://localhost:11434/v1
+```
+
+Avoid:
+
+```yaml
+providers:
+  ollama:
+    name: Ollama Local
+    base_url: http://localhost:11434/v1
+```
+:::
+
 **`custom_providers` list** (legacy — supports multiple entries per provider for pre-configured model lists):
 
 ```yaml
